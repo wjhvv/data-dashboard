@@ -12,14 +12,14 @@
 
 ## 技術棧
 
-| 分類 | 套件 |
-|------|------|
-| 框架 | React 19、TypeScript 5.9 |
-| 建構工具 | Vite 7 |
-| 樣式 | Tailwind CSS v4 |
-| 圖表 | Recharts 3 |
+| 分類     | 套件                            |
+| -------- | ------------------------------- |
+| 框架     | React 19、TypeScript 5.9        |
+| 建構工具 | Vite 7                          |
+| 樣式     | Tailwind CSS v4                 |
+| 圖表     | Recharts 3                      |
 | 資料解析 | papaparse（CSV）、xlsx（Excel） |
-| 圖表匯出 | html-to-image |
+| 圖表匯出 | html-to-image                   |
 
 ## 安裝與啟動
 
