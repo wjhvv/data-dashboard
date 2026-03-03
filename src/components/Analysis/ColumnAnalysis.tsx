@@ -22,7 +22,7 @@ import type { ChartType } from "./ChartTypeToggle";
 import { BinCountSlider } from "./BinCountSlider";
 import { ExpandedChartModal } from "./ExpandedChartModal";
 import { ColumnTypeBadge } from "../ColumnTypeBadge";
-import { DownloadIcon, ExpandIcon, SettingsIcon } from "../icons";
+import { DownloadIcon, SettingsIcon } from "../icons";
 import { downloadAsPng } from "../../utils/downloadAsPng";
 import { CategoricalStatsTable } from "./CategoricalStatsTable";
 import type { CellValue } from "../../utils/dataUtils";
