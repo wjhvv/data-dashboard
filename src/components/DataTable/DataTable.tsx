@@ -4,6 +4,7 @@ import type { CellValue } from '../../utils/dataUtils';
 import type { ColumnMeta, ColumnFilter, NumericFilter as NumericFilterType, CategoricalFilter as CategoricalFilterType } from '../../hooks/useDataStore';
 import type { NumericStats, CategoricalStats } from '../../utils/histogramBinner';
 import { ChevronUpIcon, ChevronDownIcon, ColumnsIcon, DownloadIcon, XIcon, ExpandIcon, FunnelIcon } from '../icons';
+import { CheckboxList } from '../CheckboxList';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { NumericFilter } from '../Filters/NumericFilter';
 import { CategoricalFilter } from '../Filters/CategoricalFilter';
@@ -32,7 +33,7 @@ function isNumericStats(s: NumericStats | CategoricalStats): s is NumericStats {
 function isFilterActive(filter: ColumnFilter | undefined): boolean {
   if (!filter) return false;
   if (filter.type === 'numeric') return filter.min !== null || filter.max !== null || filter.exact !== null;
-  return filter.selected.size > 0;
+  return filter.selected !== null;
 }
 
 function filterSummary(filter: ColumnFilter): string {
@@ -43,6 +44,7 @@ function filterSummary(filter: ColumnFilter): string {
     if (filter.max !== null) parts.push(`≤ ${filter.max}`);
     return parts.join(', ');
   }
+  if (filter.selected === null || filter.selected.size === 0) return filter.selected === null ? 'All' : '(none)';
   const vals = Array.from(filter.selected);
   if (vals.length <= 2) return vals.join(', ');
   return `${vals.slice(0, 2).join(', ')} +${vals.length - 2}`;
@@ -63,7 +65,7 @@ function FilterPopover({ colName, column, stats, filter, onFilterChange, onToggl
   const ref = useClickOutside<HTMLDivElement>(onClose);
 
   const defaultNumericFilter: NumericFilterType = { type: 'numeric', min: null, max: null, exact: null };
-  const defaultCategoricalFilter: CategoricalFilterType = { type: 'categorical', selected: new Set() };
+  const defaultCategoricalFilter: CategoricalFilterType = { type: 'categorical', selected: null };
 
   const active = isFilterActive(filter);
 
@@ -123,7 +125,6 @@ export function DataTable({ headers, rows, totalRows, columns, rawColumnStatsMap
   const [sortDir, setSortDir] = useState<SortDir>(null);
   const [visibleCols, setVisibleCols] = useState<Set<string>>(new Set(headers));
   const [colPickerOpen, setColPickerOpen] = useState(false);
-  const [colSearch, setColSearch] = useState('');
   const [filterPickerOpen, setFilterPickerOpen] = useState(false);
   const [filterSearch, setFilterSearch] = useState('');
   const [expanded, setExpanded] = useState(false);
@@ -200,10 +201,6 @@ export function DataTable({ headers, rows, totalRows, columns, rawColumnStatsMap
   };
 
   if (headers.length === 0) return null;
-
-  const filteredColList = colSearch
-    ? headers.filter((h) => h.toLowerCase().includes(colSearch.toLowerCase()))
-    : headers;
 
   const filteredFilterList = filterSearch
     ? headers.filter((h) => h.toLowerCase().includes(filterSearch.toLowerCase()))
@@ -305,28 +302,16 @@ export function DataTable({ headers, rows, totalRows, columns, rawColumnStatsMap
             </button>
             {colPickerOpen && (
               <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-2">
-                <div className="relative mb-2">
-                  <input
-                    type="text"
-                    value={colSearch}
-                    onChange={(e) => setColSearch(e.target.value)}
-                    placeholder="Search columns..."
-                    className="w-full border rounded px-2 py-1 text-xs pr-6"
-                  />
-                  {colSearch && (
-                    <button onClick={() => setColSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer">
-                      <XIcon size={12} />
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-48 overflow-y-auto space-y-0.5">
-                  {filteredColList.map((h) => (
-                    <label key={h} className="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-gray-50 cursor-pointer">
-                      <input type="checkbox" checked={visibleCols.has(h)} onChange={() => toggleCol(h)} />
-                      <span className="text-xs truncate">{h}</span>
-                    </label>
-                  ))}
-                </div>
+                <CheckboxList
+                  items={headers.map((h) => ({ key: h }))}
+                  isChecked={(k) => visibleCols.has(k)}
+                  onToggle={toggleCol}
+                  onAll={(visibleKeys) => setVisibleCols((prev) => new Set([...prev, ...visibleKeys]))}
+                  onNone={(visibleKeys) => setVisibleCols((prev) => { const next = new Set(prev); visibleKeys.forEach((k) => next.delete(k)); return next; })}
+                  activeCount={visibleCols.size}
+                  totalCount={headers.length}
+                  countLabel="visible"
+                />
               </div>
             )}
           </div>

@@ -37,7 +37,7 @@ export function FilterPanel({
   const activeFilterCount = Object.values(filterMap).filter((f) =>
     f.type === 'numeric'
       ? f.min !== null || f.max !== null || f.exact !== null
-      : f.selected.size > 0
+      : f.selected !== null
   ).length;
 
   return (

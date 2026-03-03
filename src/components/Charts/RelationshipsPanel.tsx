@@ -5,7 +5,8 @@ import { CorrelationMatrix } from './CorrelationMatrix';
 import { ScatterPlot } from './ScatterPlot';
 import { computeCorrelationMatrix } from '../../utils/correlationUtils';
 import { useClickOutside } from '../../hooks/useClickOutside';
-import { ColumnsIcon, DownloadIcon, SearchIcon } from '../icons';
+import { ColumnsIcon, DownloadIcon } from '../icons';
+import { CheckboxList } from '../CheckboxList';
 import { downloadAsPng } from '../../utils/downloadAsPng';
 
 interface Props {
@@ -25,16 +26,11 @@ export function RelationshipsPanel({ columns, rows, headers }: Props) {
   // Correlation column filter: null = all shown, Set = only those in set shown
   const [corrColFilter, setCorrColFilter] = useState<Set<string> | null>(null);
   const [corrPickerOpen, setCorrPickerOpen] = useState(false);
-  const [corrPickerSearch, setCorrPickerSearch] = useState('');
   const corrPickerRef = useClickOutside<HTMLDivElement>(() => setCorrPickerOpen(false));
 
   const filteredCorrCols = corrColFilter === null
     ? numericCols
     : numericCols.filter((c) => corrColFilter.has(c.name));
-
-  const filteredPickerCols = corrPickerSearch
-    ? numericCols.filter((c) => c.name.toLowerCase().includes(corrPickerSearch.toLowerCase()))
-    : numericCols;
 
   const hasCustomCorrFilter = corrColFilter !== null;
 
@@ -133,46 +129,29 @@ export function RelationshipsPanel({ columns, rows, headers }: Props) {
 
             {corrPickerOpen && (
               <div className="absolute left-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-2">
-                <div className="relative mb-2">
-                  <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={11} />
-                  <input
-                    type="text"
-                    value={corrPickerSearch}
-                    onChange={(e) => setCorrPickerSearch(e.target.value)}
-                    placeholder="Search columns…"
-                    className="w-full border rounded pl-6 pr-2 py-1 text-xs"
-                  />
-                </div>
-                <div className="flex items-center gap-2 mb-2 text-xs border-b border-gray-100 pb-1.5">
-                  <button
-                    onClick={() => setCorrColFilter(null)}
-                    className="text-blue-600 hover:underline cursor-pointer font-medium"
-                  >
-                    Select all
-                  </button>
-                  <span className="text-gray-300">|</span>
-                  <button
-                    onClick={() => setCorrColFilter(new Set())}
-                    className="text-gray-500 hover:underline cursor-pointer"
-                  >
-                    None
-                  </button>
-                  <span className="text-gray-400 ml-auto">
-                    {filteredCorrCols.length} / {numericCols.length}
-                  </span>
-                </div>
-                <div className="max-h-52 overflow-y-auto space-y-0.5">
-                  {filteredPickerCols.map((c) => (
-                    <label key={c.name} className="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={corrColFilter === null || corrColFilter.has(c.name)}
-                        onChange={() => toggleCorrCol(c.name)}
-                      />
-                      <span className="text-xs truncate">{c.name}</span>
-                    </label>
-                  ))}
-                </div>
+                <CheckboxList
+                  items={numericCols.map((c) => ({ key: c.name }))}
+                  isChecked={(k) => corrColFilter === null || corrColFilter.has(k)}
+                  onToggle={toggleCorrCol}
+                  onAll={(visibleKeys) => {
+                    setCorrColFilter((prev) => {
+                      if (prev === null) return null;
+                      const next = new Set([...prev, ...visibleKeys]);
+                      return next.size >= numericCols.length ? null : next;
+                    });
+                  }}
+                  onNone={(visibleKeys) => {
+                    setCorrColFilter((prev) => {
+                      const current = prev === null ? new Set(numericCols.map((c) => c.name)) : new Set(prev);
+                      const visSet = new Set(visibleKeys);
+                      return new Set([...current].filter((k) => !visSet.has(k)));
+                    });
+                  }}
+                  activeCount={filteredCorrCols.length}
+                  totalCount={numericCols.length}
+                  countLabel="visible"
+                  maxHeight="max-h-52"
+                />
               </div>
             )}
           </div>

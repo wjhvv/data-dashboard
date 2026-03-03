@@ -18,7 +18,8 @@ export interface NumericFilter {
 
 export interface CategoricalFilter {
   type: 'categorical';
-  selected: Set<string>;
+  // null = no filter (all pass); Set (even empty) = explicit inclusion list
+  selected: Set<string> | null;
 }
 
 export type ColumnFilter = NumericFilter | CategoricalFilter;
@@ -67,7 +68,7 @@ function applyFilters(
 ): CellValue[][] {
   const activeFilters = Object.entries(filterMap).filter(([, f]) => {
     if (f.type === 'numeric') return f.min !== null || f.max !== null || f.exact !== null;
-    return f.selected.size > 0;
+    return f.selected !== null;
   });
   if (activeFilters.length === 0) return rows;
 
@@ -86,7 +87,7 @@ function applyFilters(
         if (filter.max !== null && n > filter.max) return false;
       } else {
         const label = v === null || v === '' ? '(empty)' : String(v);
-        if (!filter.selected.has(label)) return false;
+        if (filter.selected === null || !filter.selected.has(label)) return false;
       }
       void col; // col used for future type-aware logic
     }

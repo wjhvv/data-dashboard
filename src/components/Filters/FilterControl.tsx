@@ -24,7 +24,7 @@ export function FilterControl({ column, stats, filter, onFilterChange, onToggleT
   const hasFilter = filter !== undefined && (
     filter.type === 'numeric'
       ? filter.min !== null || filter.max !== null || filter.exact !== null
-      : filter.selected.size > 0
+      : filter.selected !== null
   );
 
   return (
@@ -60,7 +60,7 @@ export function FilterControl({ column, stats, filter, onFilterChange, onToggleT
           ) : (
             <CategoricalFilter
               stats={stats as CategoricalStats}
-              filter={filter as CategoricalFilterType ?? { type: 'categorical', selected: new Set() }}
+              filter={filter as CategoricalFilterType ?? { type: 'categorical', selected: null }}
               onChange={onFilterChange}
             />
           )}

@@ -6,6 +6,7 @@ import type { CellValue } from '../../utils/dataUtils';
 import { ColumnAnalysis } from './ColumnAnalysis';
 import { AllStatsTable } from './AllStatsTable';
 import { ChartFilterIcon, SearchIcon, XIcon, SpinnerIcon, ExpandIcon, DownloadIcon } from '../icons';
+import { CheckboxList } from '../CheckboxList';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { captureChartAsPng } from '../../utils/downloadAsPng';
 
@@ -39,9 +40,9 @@ export function AnalysisPanel({
   onExpand,
 }: Props) {
   const [chartSearch, setChartSearch] = useState('');
-  const [visibleCharts, setVisibleCharts] = useState<Set<string>>(new Set());
+  // null = show all; Set<string> = explicit list (empty Set = show none)
+  const [visibleCharts, setVisibleCharts] = useState<Set<string> | null>(null);
   const [chartPickerOpen, setChartPickerOpen] = useState(false);
-  const [chartPickerSearch, setChartPickerSearch] = useState('');
   const [page, setPage] = useState(0);
   const [groupBy, setGroupBy] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('charts');
@@ -58,11 +59,11 @@ export function AnalysisPanel({
 
   const pickerRef = useClickOutside<HTMLDivElement>(() => setChartPickerOpen(false));
 
-  const hasCustomSelection = visibleCharts.size > 0;
+  const hasCustomSelection = visibleCharts !== null;
 
   const displayColumns = columns.filter((c) => {
     const matchSearch = !chartSearch || c.name.toLowerCase().includes(chartSearch.toLowerCase());
-    const matchPicker = !hasCustomSelection || visibleCharts.has(c.name);
+    const matchPicker = visibleCharts === null || visibleCharts.has(c.name);
     return matchSearch && matchPicker;
   });
 
@@ -82,22 +83,19 @@ export function AnalysisPanel({
 
   const toggleChart = (name: string) => {
     setVisibleCharts((prev) => {
+      if (prev === null) {
+        const next = new Set(columns.map((c) => c.name));
+        next.delete(name);
+        return next;
+      }
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
-      return next;
+      return next.size >= columns.length ? null : next;
     });
     setPage(0);
   };
 
-  const clearChartSelection = () => {
-    setVisibleCharts(new Set());
-    setPage(0);
-  };
-
-  const filteredPickerCols = chartPickerSearch
-    ? columns.filter((c) => c.name.toLowerCase().includes(chartPickerSearch.toLowerCase()))
-    : columns;
 
   const downloadAllZip = async () => {
     setDownloadingZip(true);
@@ -259,42 +257,34 @@ export function AnalysisPanel({
               >
                 <ChartFilterIcon size={14} />
                 Columns
-                {hasCustomSelection && <span className="bg-white/30 rounded text-xs px-1">{visibleCharts.size}</span>}
+                {visibleCharts !== null && <span className="bg-white/30 rounded text-xs px-1">{visibleCharts.size}</span>}
               </button>
               {chartPickerOpen && (
                 <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-2">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-gray-600">Select charts to show</span>
-                    {hasCustomSelection && (
-                      <button onClick={clearChartSelection} className="text-xs text-blue-600 hover:underline cursor-pointer">Clear</button>
-                    )}
-                  </div>
-                  <div className="relative mb-2">
-                    <input
-                      type="text"
-                      value={chartPickerSearch}
-                      onChange={(e) => setChartPickerSearch(e.target.value)}
-                      placeholder="Search..."
-                      className="w-full border rounded px-2 py-1 text-xs pr-6"
-                    />
-                    {chartPickerSearch && (
-                      <button onClick={() => setChartPickerSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer">
-                        <XIcon size={12} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-48 overflow-y-auto space-y-0.5">
-                    {filteredPickerCols.map((c) => (
-                      <label key={c.name} className="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-gray-50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!hasCustomSelection || visibleCharts.has(c.name)}
-                          onChange={() => toggleChart(c.name)}
-                        />
-                        <span className="text-xs truncate">{c.name}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <CheckboxList
+                    items={columns.map((c) => ({ key: c.name }))}
+                    isChecked={(k) => visibleCharts === null || visibleCharts.has(k)}
+                    onToggle={toggleChart}
+                    onAll={(visibleKeys) => {
+                      setVisibleCharts((prev) => {
+                        if (prev === null) return null;
+                        const next = new Set([...prev, ...visibleKeys]);
+                        return next.size >= columns.length ? null : next;
+                      });
+                      setPage(0);
+                    }}
+                    onNone={(visibleKeys) => {
+                      setVisibleCharts((prev) => {
+                        const current = prev === null ? new Set(columns.map((c) => c.name)) : new Set(prev);
+                        const visSet = new Set(visibleKeys);
+                        return new Set([...current].filter((k) => !visSet.has(k)));
+                      });
+                      setPage(0);
+                    }}
+                    activeCount={visibleCharts === null ? columns.length : visibleCharts.size}
+                    totalCount={columns.length}
+                    countLabel="visible"
+                  />
                 </div>
               )}
             </div>
